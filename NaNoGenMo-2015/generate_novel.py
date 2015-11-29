@@ -1,28 +1,103 @@
 #!/usr/bin/python
 
 import sys, getopt
+from datetime import datetime, timedelta
 import requests
+import json
+import codecs
+
+request_url = "https://tt-history.appspot.com/rpc"
+world_woeid = 1
+
+novel_file = "novel.txt"
 
 
-def generate_novel(title, days, words):
-    pass
+def get_topics(days):
+    topics = []
+
+    # Remove the hours, minutes, seconds and microseconds to get the start of the day
+    today = datetime.today()
+    today -= timedelta(hours=today.hour,\
+                       minutes=today.minute,\
+                       seconds=today.second,\
+                       microseconds=today.microsecond)
+
+    days_ago = 0
+    while days_ago < days:
+        # Get the current days start and end in milliseconds from Jan. 1, 1970
+        start_of_day = today - timedelta(days=days_ago)
+        end_of_day = start_of_day + timedelta(hours=23)
+
+        start_of_day_s = int(start_of_day.timestamp())
+        end_of_day_s = int(end_of_day.timestamp())
+
+        # Get the top trending topic for this day
+        payload = {
+            'woeid': world_woeid,
+            'timestamp': start_of_day_s,
+            'end_timestamp': end_of_day_s,
+            'limit': '1'
+        }
+        r = requests.get(request_url, params=payload);
+        topic = r.json()["trends"][0]["name"]
+
+        # Collect the topic, along with the related dates
+        topics.append({
+            "start_of_day": start_of_day,
+            "end_of_day": end_of_day,
+            "topic": topic
+        })
+        days_ago += 1
+
+    return topics
+
+
+# Return the full text for the "chapter", which is just words_per_day's worth of
+# words based on tweets from this topic for this day
+def write_chapter(topic_info, words_per_day):
+    start_of_day = topic_info["start_of_day"]
+    end_of_day = topic_info["end_of_day"]
+    topic = topic_info["topic"]
+    chapter = ""
+
+    chapter_title = "Dear diary: On " + start_of_day.strftime('%b %d, %Y') + ", I thought about " + topic + ":\n"
+    chapter += chapter_title + '\n'
+
+    # Get the relevant tweets and build a chapter here
+
+    chapter += '\n'
+    return chapter
+
+def generate_novel(title, author, days, words_per_day):
+    topics = get_topics(days)
+
+    with codecs.open(novel_file, 'w', encoding='utf-8') as novel:
+        novel.write(title + '\n')
+        novel.write('By: ' + author + '\n====================\n')
+
+        for topic in topics:
+            chapter = write_chapter(topic, words_per_day)
+            novel.write(chapter)
 
 
 def main(argv):
     title = ''
+    author = ''
     days = 30
     words = 50000
     try:
-        opts, args = getopt.getopt(argv,"ht:d:w:",["title=","days=","words="])
+        opts, args = getopt.getopt(argv,"ht:a:d:w:",["title=","author=","days=","words="])
     except getopt.GetoptError:
-        print('generate_novel.py -t <title> -d <days> -w <words>')
+        print('generate_novel.py -t <title> -a <author> -d <days> -w <words>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('generate_novel.py -t <title> -d <days> -w <words>')
+            print('generate_novel.py -t <title> -a <author> -d <days> -w <words>')
             sys.exit()
         elif opt in ("-t", "--title"):
             title = arg
+        elif opt in ("-a", "--author"):
+            author = arg
         elif opt in ("-d", "--days"):
             days = int(arg)
             if days > 365:
@@ -37,12 +112,13 @@ def main(argv):
         sys.exit()
 
     print('Novel Title: ', title)
+    print('Author: ', author)
     print('Days going back: ', days)
     print('Number of words: ', words)
     print('Words per day: ', words_per_day)
 
 
-    generate_novel(title, days, words)
+    generate_novel(title, author, days, words_per_day)
 
 if __name__ == "__main__":
    main(sys.argv[1:])
