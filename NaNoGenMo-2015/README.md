@@ -1,0 +1,1 @@
+A Python program that generates a 50,000 word novel using Twitter trending topics. It uses tt-history to get the worldwide top topic for each of the last 30 days and then uses the Twitter API to get enough tweets for each day from the corresponding topic to write a 50,000 word novel in the style of a diary.
