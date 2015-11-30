@@ -123,7 +123,7 @@ def generate_novel(title, author, days, words_per_day):
     topics = get_topics(days)
 
     today_str = datetime.today().strftime('%b %d, %Y')
-    novel_filename = title + ' (' + today_str + ')' + '.txt'
+    novel_filename = title + ' (' + today_str + ')' + '.md'
     with codecs.open(novel_filename, 'w', encoding='utf-8') as novel:
         novel.write(title + '\n')
         novel.write('By: ' + author + '\n')
